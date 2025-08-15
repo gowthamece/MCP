@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "identityapp1": {
+      "connectionInfo": "App registration: MCP-App, Tenant: Gowtham CBE B2C (gowthamcbe.onmicrosoft.com - AAD B2C)",
+      "type": "identityapp.default"
+    },
+    "secrets1": {
+      "type": "secrets.user"
+    }
+  }
+}

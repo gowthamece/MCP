@@ -1,4 +1,6 @@
 using MCP_Balzor_AI_App.Components;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,35 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+
+// Add authentication
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
+{
+    var postLogoutRedirectUri = builder.Configuration["AzureAd:PostLogoutRedirectUri"];
+
+    options.Events = new OpenIdConnectEvents
+    {
+        OnRedirectToIdentityProviderForSignOut = context =>
+        {
+            if (!string.IsNullOrEmpty(postLogoutRedirectUri))
+            {
+
+                //context.ProtocolMessage.PostLogoutRedirectUri = $"https://{context.Request.Host}{postLogoutRedirectUri}";
+                var logoutUri = $"https://login.microsoftonline.com/common/oauth2/v2.0/logout" +
+                   $"?post_logout_redirect_uri={Uri.EscapeDataString($"https://{context.Request.Host}/{context.Request.Path}/{postLogoutRedirectUri}")}";
+
+                context.Response.Redirect(logoutUri);
+                context.HandleResponse();
+                return Task.CompletedTask;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+});
 // Register HttpClient
 builder.Services.AddHttpClient();
 
@@ -30,6 +61,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
