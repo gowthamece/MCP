@@ -1,24 +1,34 @@
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Web
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Security.Claims
 
 @inject NavigationManager Navigation
-@inject SignOutSessionStateManager SignOutManager
 
 <AuthorizeView>
     <Authorized>
-        Hello, @context.User.Identity?.Name!
-        <button class="nav-link btn btn-link" @onclick="BeginLogout">Log out</button>
+        <div class="user-info">
+            <span class="user-name">
+                Hello, @GetDisplayName(context.User)!
+            </span>
+            <a href="MicrosoftIdentity/Account/SignOut" class="btn btn-outline-light btn-sm ms-2">
+                Sign out
+            </a>
+        </div>
     </Authorized>
     <NotAuthorized>
-        <a href="authentication/login">Log in</a>
+        <a href="MicrosoftIdentity/Account/SignIn" class="btn btn-primary btn-sm">Sign in</a>
     </NotAuthorized>
 </AuthorizeView>
 
 @code{
-    private async Task BeginLogout(MouseEventArgs args)
+    private string GetDisplayName(ClaimsPrincipal user)
     {
-        await SignOutManager.SetSignOutState();
-        Navigation.NavigateTo("authentication/logout");
+        // Try to get the display name from claims
+        var displayName = user.FindFirst("name")?.Value 
+                         ?? user.FindFirst(ClaimTypes.Name)?.Value
+                         ?? user.FindFirst("preferred_username")?.Value
+                         ?? user.FindFirst(ClaimTypes.Email)?.Value
+                         ?? "User";
+        
+        return displayName;
     }
 }

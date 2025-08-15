@@ -49,3 +49,30 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* User info styling */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-name {
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.top-row.auth {
+    background-color: #1b6ec2;
+    padding: 0.5rem 1rem;
+}
+
+.top-row.auth a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.top-row.auth a:hover {
+    color: #f8f9fa;
+}
