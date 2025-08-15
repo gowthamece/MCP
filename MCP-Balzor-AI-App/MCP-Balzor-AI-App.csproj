@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MCP-Balzor-AI-App</RootNamespace>
+    <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MCP-Balzor-AI-App.ServiceDefaults\MCP-Balzor-AI-App.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0" />
+    <PackageReference Include="Mcp.Net.Client" Version="0.9.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+  </ItemGroup>
+
+</Project>
