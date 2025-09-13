@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Sdk Name="Aspire.AppHost.Sdk" Version="9.2.1" />
 
@@ -15,7 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MCP-Balzor-AI-App\MCP-Balzor-AI-App.csproj" />
+    <ProjectReference Include="..\MCP.ADB2C\MCP.ADB2C.csproj" />
+    <ProjectReference Include="..\MCP.ADB2C.Client\MCP-ADB2C-Client.csproj" />
   </ItemGroup>
 
 </Project>

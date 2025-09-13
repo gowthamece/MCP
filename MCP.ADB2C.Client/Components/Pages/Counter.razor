@@ -1,0 +1,318 @@
+﻿@page "/counter"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Identity.Web
+@using System.Security.Claims
+@using System.Text
+@inject Microsoft.Identity.Web.ITokenAcquisition tokenAcquisition
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<Counter> Logger
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject MCPClientService MCPClientService
+@rendermode InteractiveServer
+@inject IHttpContextAccessor HttpContextAccessor
+@attribute [Authorize]
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+<h3>Access Token Debugging</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <button class="btn btn-success" @onclick="GetToken">Get Custom API Token</button>
+        <button class="btn btn-info" @onclick="GetGraphToken">Get Graph Token</button>
+        <button class="btn btn-primary" @onclick="GetMSGraphUserRead">Get MS Graph User.Read</button>
+        <button class="btn btn-warning" @onclick="GetUserInfo">Get User Info</button>
+        <button class="btn btn-danger" @onclick="TriggerConsent">Trigger Consent</button>
+        <button class="btn btn-secondary" @onclick="ClearResults">Clear</button>
+        <button class="btn btn-dark" @onclick="TestOpenAIToolAnalysis">Test OpenAI Tool Analysis</button>
+    </div>
+</div>
+
+<br />
+
+@if (!string.IsNullOrEmpty(userInfo))
+{
+    <div class="alert alert-info">
+        <h4>User Information:</h4>
+        <pre>@userInfo</pre>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(accessToken))
+{
+    <div class="alert alert-success">
+        <h4>Access Token:</h4>
+        <p><strong>Length:</strong> @accessToken.Length characters</p>
+        <p><strong>First 50 chars:</strong> @(accessToken.Length > 50 ? accessToken.Substring(0, 50) + "..." : accessToken)</p>
+        <details>
+            <summary>Full Token (Click to expand)</summary>
+            <pre style="word-break: break-all;">@accessToken</pre>
+        </details>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <h4>Error:</h4>
+        <pre>@errorMessage</pre>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(debugInfo))
+{
+    <div class="alert alert-warning">
+        <h4>Debug Information:</h4>
+        <pre>@debugInfo</pre>
+    </div>
+}
+
+@code {
+    private int currentCount = 0;
+    private string? accessToken;
+    private string? errorMessage;
+    private string? userInfo;
+    private string? debugInfo;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+
+    public async Task GetToken()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Attempting to get custom API token");
+            
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState?.User?.Identity?.IsAuthenticated == true)
+            {
+                debugInfo = $"User authenticated: {authState.User.Identity.Name}\n";
+                debugInfo += $"Claims count: {authState.User.Claims.Count()}\n";
+                debugInfo += "Key claims:\n";
+                
+                foreach (var claim in authState.User.Claims.Take(10))
+                {
+                    debugInfo += $"  {claim.Type}: {claim.Value}\n";
+                }
+                
+                // Use your custom API scope - this should match what you configured in Azure AD
+                string[] scopes = new[] { "https://gowthamcbe.onmicrosoft.com/628a6be0-30a8-4d34-a377-b80a1797b711/User.Read" };
+                Logger.LogInformation("Calling GetAccessTokenForUserAsync with custom API scopes: {Scopes}", string.Join(",", scopes));
+                var authResult = await HttpContextAccessor.HttpContext!
+               .AuthenticateAsync(OpenIdConnectDefaults.AuthenticationScheme);
+                accessToken = authResult.Properties?.GetTokenValue("access_token");
+             //   accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(scopes);
+                Logger.LogInformation("Custom API token acquired successfully, length: {Length}", accessToken?.Length ?? 0);
+            }
+            else
+            {
+                errorMessage = "User is not authenticated";
+                Logger.LogWarning("User is not authenticated");
+            }
+        }
+        catch (MicrosoftIdentityWebChallengeUserException challengeEx)
+        {
+            Logger.LogWarning("Challenge exception: {Message}", challengeEx.Message);
+            errorMessage = $"Challenge Required: {challengeEx.Message}\n";
+            errorMessage += $"Scopes needed: {string.Join(", ", challengeEx.Scopes ?? new string[0])}\n";
+            errorMessage += "User needs to consent to required permissions.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Token acquisition failed");
+            errorMessage = $"Error: {ex.GetType().Name}\nMessage: {ex.Message}\nStack: {ex.StackTrace}";
+        }
+    }
+
+    public async Task GetGraphToken()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Attempting to get Graph token");
+            string[] scopes = new[] { "https://graph.microsoft.com/.default" };
+            accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(scopes);
+            Logger.LogInformation("Graph token acquired successfully, length: {Length}", accessToken?.Length ?? 0);
+        }
+        catch (MicrosoftIdentityWebChallengeUserException challengeEx)
+        {
+            Logger.LogWarning("Graph challenge exception: {Message}", challengeEx.Message);
+            errorMessage = $"Graph Challenge Required: {challengeEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Graph token acquisition failed");
+            errorMessage = $"Graph Error: {ex.Message}";
+        }
+    }
+
+    public async Task GetMSGraphUserRead()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Attempting to get Microsoft Graph User.Read token");
+            string[] scopes = new[] { "https://graph.microsoft.com/User.Read" };
+            accessToken = await tokenAcquisition.GetAccessTokenForUserAsync(scopes);
+            Logger.LogInformation("MS Graph User.Read token acquired successfully, length: {Length}", accessToken?.Length ?? 0);
+        }
+        catch (MicrosoftIdentityWebChallengeUserException challengeEx)
+        {
+            Logger.LogWarning("MS Graph User.Read challenge exception: {Message}", challengeEx.Message);
+            errorMessage = $"MS Graph User.Read Challenge Required: {challengeEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "MS Graph User.Read token acquisition failed");
+            errorMessage = $"MS Graph User.Read Error: {ex.Message}";
+        }
+    }
+
+    public async Task GetUserInfo()
+    {
+        ClearResults();
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState?.User?.Identity?.IsAuthenticated == true)
+            {
+                userInfo = $"Identity Name: {authState.User.Identity.Name}\n";
+                userInfo += $"Authentication Type: {authState.User.Identity.AuthenticationType}\n";
+                userInfo += $"Is Authenticated: {authState.User.Identity.IsAuthenticated}\n\n";
+                userInfo += "All Claims:\n";
+                
+                foreach (var claim in authState.User.Claims)
+                {
+                    userInfo += $"  {claim.Type}: {claim.Value}\n";
+                }
+            }
+            else
+            {
+                userInfo = "User is not authenticated";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting user info: {ex.Message}";
+        }
+    }
+
+    private void ClearResults()
+    {
+        accessToken = null;
+        errorMessage = null;
+        userInfo = null;
+        debugInfo = null;
+    }
+
+    private async Task TriggerConsent()
+    {
+        try
+        {
+            Logger.LogInformation("Triggering consent flow for custom API");
+            
+            // Build the consent URL manually
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState?.User?.Identity?.IsAuthenticated == true)
+              {
+                var tenantId = "cc2ed587-ab5d-454f-a433-035a5aa8a95c"; // Your tenant ID
+                var clientId = "628a6be0-30a8-4d34-a377-b80a1797b711"; // Your client ID
+                var scope = "https://gowthamcbe.onmicrosoft.com/628a6be0-30a8-4d34-a377-b80a1797b711/User.Read";
+                var redirectUri = Uri.EscapeDataString(Navigation.BaseUri + "counter");
+                
+                var consentUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize" +
+                               $"?client_id={clientId}" +
+                               $"&response_type=code" +
+                               $"&redirect_uri={redirectUri}" +
+                               $"&scope={Uri.EscapeDataString(scope)}" +
+                               $"&response_mode=query" +
+                               $"&prompt=consent" +
+                               $"&state=consent_flow";
+                
+                Logger.LogInformation("Redirecting to consent URL: {ConsentUrl}", consentUrl);
+                
+                // Redirect to consent page
+                await JSRuntime.InvokeVoidAsync("open", consentUrl, "_blank");
+                
+                debugInfo = $"Consent URL opened in new tab:\n{consentUrl}";
+            }
+            else
+            {
+                errorMessage = "User not authenticated, cannot trigger consent";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error triggering consent");
+            errorMessage = $"Error triggering consent: {ex.Message}";
+        }
+    }
+    
+    private async Task LogoutAndReLogin()
+    {
+        try
+        {
+            Logger.LogInformation("Initiating logout and re-login flow");
+            
+            // Clear current results
+            ClearResults();
+            
+            // Navigate to logout endpoint which will trigger re-authentication with consent
+            var logoutUrl = "/MicrosoftIdentity/Account/SignOut";
+            Navigation.NavigateTo(logoutUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout and re-login");
+            errorMessage = $"Error during logout: {ex.Message}";
+        }
+    }
+
+    private async Task TestOpenAIToolAnalysis()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Testing OpenAI tool analysis");
+            
+            // Test multiple prompts including the new RevokeUserRole
+            var testPrompts = new[]
+            {
+                "Get list of users assigned to TeamManager role for the application AppRole-Management",
+                "Assign Admin role to john.doe@example.com for MyApp application",
+                "Revoke Manager role from jane.smith@example.com for AppRole-Management application"
+            };
+            
+            var results = new StringBuilder();
+            
+            foreach (var prompt in testPrompts)
+            {
+                results.AppendLine($"=== Testing: '{prompt}' ===");
+                
+                var result = await MCPClientService.GetChatCompletionAsync(prompt);
+                results.AppendLine($"Result: {result}");
+                results.AppendLine();
+            }
+            
+            userInfo = results.ToString();
+            
+            Logger.LogInformation("OpenAI tool analysis test completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during OpenAI tool analysis test");
+            errorMessage = $"Error during test: {ex.Message}";
+        }
+    }
+}

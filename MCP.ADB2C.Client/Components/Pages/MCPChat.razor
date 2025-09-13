@@ -1,0 +1,425 @@
+@page "/mcpchat"
+@using MCP.ADB2C.Client.Services
+@using Microsoft.AspNetCore.Components
+@inject MCPClientService ChatService
+@rendermode InteractiveServer
+
+@* This page is for the Azure AD B2C AI Assistant Chat Bot with enhanced MCP tool integration *@
+<div class="fullscreen-chat-layout">
+    <div class="main-chat-area">
+        <!-- Quick Actions Panel - Left Side with Collapsible Feature -->
+        <div class="quick-actions-sidebar @(isQuickActionsCollapsed ? "collapsed" : "")">
+            <!-- Toggle Button - Top Right Corner -->
+            <button class="btn btn-outline-secondary btn-sm toggle-btn" @onclick="ToggleQuickActions" title="@(isQuickActionsCollapsed ? "Expand Quick Actions" : "Collapse Quick Actions")">
+                <i class="bi @(isQuickActionsCollapsed ? "bi-chevron-right" : "bi-chevron-left")"></i>
+            </button>
+            
+            @if (!isQuickActionsCollapsed)
+            {
+                <div class="quick-actions-content">
+                    <div class="quick-actions-title mb-3">
+                        <h6>⚡ Quick Actions</h6>
+                    </div>
+                    
+                    <!-- Chat Controls Section -->
+                    <div class="chat-controls-section mb-3">
+                        <div class="chat-info mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-chat-dots me-1"></i>
+                                Messages: @chatHistory.Count
+                            </small>
+                        </div>
+                        <div class="chat-action-buttons">
+                            <button class="btn btn-outline-danger btn-sm me-1 mb-1" @onclick="ClearConversation" disabled="@isLoading" title="Clear Chat">
+                                <i class="bi bi-trash3"></i>
+                                <span class="btn-text"> Clear</span>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm mb-1" @onclick="ShowHelp" disabled="@isLoading" title="Help">
+                                <i class="bi bi-question-circle"></i>
+                                <span class="btn-text"> Help</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Action Buttons -->
+                    <div class="action-buttons">
+                        <button class="btn btn-primary btn-sm mb-2 w-100" @onclick="@(() => SendQuickMessage("Show all users"))" disabled="@isLoading">
+                            <i class="bi bi-people-fill me-1"></i> All Users
+                        </button>
+                        <button class="btn btn-success btn-sm mb-2 w-100" @onclick="@(() => SendQuickMessage("Show all applications"))" disabled="@isLoading">
+                            <i class="bi bi-grid-3x3-gap-fill me-1"></i> All Apps
+                        </button>
+                        <button class="btn btn-info btn-sm mb-2 w-100" @onclick="@(() => SendQuickMessage("Show my applications"))" disabled="@isLoading">
+                            <i class="bi bi-building me-1"></i> My Apps
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Chat Container - Right Side (Full Width) -->
+        <div class="chat-container">
+            <div class="chat-history">
+                @foreach (var message in chatHistory)
+                {
+                    <div class="@(message.IsUser ? "user-message" : "bot-message")">
+                        <div>
+                            @if (message.IsUser)
+                            {
+                                @message.Text
+                            }
+                            else
+                            {
+                                @((MarkupString)message.Text)
+                            }
+                        </div>
+                    </div>
+                }
+                @if (isLoading)
+                {
+                    <div class="bot-message">
+                        <div>🤖 Thinking...</div>
+                    </div>
+                }
+            </div>
+            <div class="chat-input">
+                <input @bind="userInput" @oninput="OnInputChanged" @onkeydown="HandleKeyDown" placeholder="Ask me about users, applications, or roles" />
+                <button class="btn btn-primary btn-lg" @onclick="SendMessage" disabled="@isLoading">
+                    <i class="bi bi-send-fill me-1"></i> Send
+                </button>
+            </div>
+            @if (isLoading)
+            {
+                <div style="text-align: center; margin-top: 0.5rem; color: #666;">
+                    <small>🔄 AI is processing your request...</small>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userInput = string.Empty;
+    private bool isLoading = false;
+    private bool isQuickActionsCollapsed = false;
+    private List<ChatMessageModel> chatHistory = new();
+
+    private void ToggleQuickActions()
+    {
+        isQuickActionsCollapsed = !isQuickActionsCollapsed;
+    }
+
+    private async Task SendMessage()
+    {
+        var input = string.IsNullOrWhiteSpace(userInput) ? "Hello" : userInput;
+        await SendMessageInternal(input);
+    }
+
+    private async Task SendQuickMessage(string message)
+    {
+        await SendMessageInternal(message);
+    }
+
+    private async Task SendMessageInternal(string input)
+    {
+        chatHistory.Add(new ChatMessageModel { Text = input, IsUser = true });
+        userInput = string.Empty;
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await ChatService.GetChatCompletionAsync(input);
+            chatHistory.Add(new ChatMessageModel { Text = response, IsUser = false });
+        }
+        catch (Exception ex)
+        {
+            chatHistory.Add(new ChatMessageModel { Text = $"❌ Error: {ex.Message}", IsUser = false });
+        }
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void ShowHelp()
+    {
+        var helpMessage = @"
+        <div style='background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;'>
+            <h4>🤖 Azure AD B2C AI Assistant - Help</h4>
+            <p>I can help you with Azure AD B2C management tasks using these commands:</p>
+            
+            <h5>👥 User Management:</h5>
+            <ul>
+                <li><strong>""Show all users""</strong> - Get all Azure AD B2C users</li>
+                <li><strong>""Show users with role Admin in app MyApp""</strong> - Get users by application role</li>
+                <li><strong>""Revoke role Admin from user john@example.com in app MyApp""</strong> - Revoke a role from a user</li>
+            </ul>
+            
+            <h5>📱 Application Management:</h5>
+            <ul>
+                <li><strong>""Show all applications""</strong> - Get all Azure AD B2C applications</li>
+                <li><strong>""Show my applications""</strong> - Get applications you own</li>
+            </ul>
+            
+            <h5>🔐 Role Management:</h5>
+            <ul>
+                <li><strong>""Show roles for app MyApp""</strong> - Get roles for a specific application</li>
+                <li><strong>""Assign role Admin to user john@example.com in app MyApp""</strong> - Assign a role to a user</li>
+            </ul>
+            
+            <h5>🌤️ Demo Tools:</h5>
+            <ul>
+                <li><strong>""Show weather forecast""</strong> - Get weather information</li>
+            </ul>
+            
+            <p><em>Tip: Use the quick action buttons above for common requests!</em></p>
+        </div>";
+
+        chatHistory.Add(new ChatMessageModel { Text = helpMessage, IsUser = false });
+        StateHasChanged();
+    }
+
+    private void ClearConversation()
+    {
+        chatHistory.Clear();
+        ChatService.ClearConversation();
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        userInput = e.Value?.ToString() ?? string.Empty;
+    }
+
+    public class ChatMessageModel
+    {
+        public string Text { get; set; } = string.Empty;
+        public bool IsUser { get; set; }
+    }
+}
+
+<style>
+/* Full screen layout */
+.fullscreen-chat-layout {   
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.main-chat-area {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+    height: calc(100vh - 90px); /* Account for smaller header */
+}
+
+/* Quick Actions Sidebar */
+.quick-actions-sidebar {
+    width: 200px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-actions-sidebar h6 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border: 1px solid #ddd;
+    min-height: 50px;
+}
+
+.chat-header h6 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.chat-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.message-count {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    min-height: 0; /* Allow flex shrinking */
+}
+
+.user-message {
+    text-align: right;
+    margin-bottom: 1rem;
+}
+
+.user-message div {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 18px 18px 4px 18px;
+    word-wrap: break-word;
+}
+
+.bot-message {
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+.bot-message div {
+    display: inline-block;
+    background: #e9ecef;
+    color: #333;
+    padding: 0.75rem 1rem;
+    border-radius: 18px 18px 18px 4px;
+    word-wrap: break-word;
+}
+
+.chat-input {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem;
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 25px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chat-input input:focus {
+    border-color: #007bff;
+}
+
+/* Responsive design */
+@@media (max-width: 1024px) {
+    .fullscreen-chat-layout {
+        left: 0; /* No sidebar on mobile */
+    }
+    
+    .quick-actions-sidebar {
+        width: 180px;
+    }
+}
+
+@@media (max-width: 768px) {
+    .main-chat-area {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .quick-actions-sidebar {
+        width: 100%;
+        height: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        min-width: calc(50% - 0.25rem);
+    }
+}
+
+/* Table styling for user profile data */
+.bot-message table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 0.9rem;
+}
+
+.bot-message table th,
+.bot-message table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.bot-message table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.bot-message table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.bot-message pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+}
+</style>

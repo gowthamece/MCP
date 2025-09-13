@@ -1,0 +1,497 @@
+@page "/mcp-tools-enhanced"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<MCPToolsEnhanced> Logger
+@inject IHttpClientFactory HttpClientFactory
+@attribute [Authorize]
+
+<h1>MCP Tools Enhanced</h1>
+<p>Interact with all available MCP tools from the Azure AD B2C server using HTTP client</p>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Connection Status -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Connection Status</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary me-2" @onclick="TestConnection">Test MCP Connection</button>
+                    <button class="btn btn-warning me-2" @onclick="ClearResults">Clear All Results</button>
+                    @if (!string.IsNullOrEmpty(connectionStatus))
+                    {
+                        <div class="alert @(connectionStatus.Contains("Success") ? "alert-success" : "alert-danger") mt-2">
+                            @connectionStatus
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- User Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>User Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-info mb-2" @onclick="GetAllUsers">Get All AD B2C Users</button>
+                            <br />
+                            <div class="form-group mb-2">
+                                <label>App Role:</label>
+                                <input @bind="appRole" class="form-control" placeholder="Enter app role ID" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>App Name:</label>
+                                <input @bind="appName" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <button class="btn btn-success" @onclick="GetUsersByAppRole">Get Users by App Role</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(usersResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Users Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@usersResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Application Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-info mb-2" @onclick="GetAllApplications">Get All AD B2C Applications</button>
+                            <br />
+                            <button class="btn btn-primary" @onclick="GetApplicationsIOwned">Get Applications I Owned</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(applicationsResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Applications Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@applicationsResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Role Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-2">
+                                <label>App Name for Roles:</label>
+                                <input @bind="appNameForRoles" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <button class="btn btn-info mb-3" @onclick="GetApplicationRoles">Get Application Roles</button>
+                            
+                            <hr />
+                            
+                            <h5>Assign Role to User</h5>
+                            <div class="form-group mb-2">
+                                <label>Username:</label>
+                                <input @bind="usernameForRole" class="form-control" placeholder="Enter username/email" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>App Name:</label>
+                                <input @bind="appNameForRoleAssignment" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>Role Name:</label>
+                                <input @bind="roleNameForAssignment" class="form-control" placeholder="Enter role name" />
+                            </div>
+                            <button class="btn btn-success" @onclick="AssignRoleToUser">Assign Role to User</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(rolesResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Roles Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@rolesResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather Forecast Tool -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Weather Forecast</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-warning" @onclick="GetWeatherForecast">Get Weather Forecast</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(weatherResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Weather Forecast:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@weatherResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <h4>Error:</h4>
+                    <pre>@errorMessage</pre>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // HTTP Client for MCP calls
+    private HttpClient? httpClient;
+    private readonly string mcpServerBaseUrl = "http://localhost:5156";
+
+    // Connection status
+    private string? connectionStatus;
+    private string? errorMessage;
+
+    // User management variables
+    private string? usersResult;
+    private string? appRole;
+    private string? appName;
+
+    // Application management variables
+    private string? applicationsResult;
+
+    // Role management variables
+    private string? rolesResult;
+    private string? appNameForRoles;
+    private string? usernameForRole;
+    private string? appNameForRoleAssignment;
+    private string? roleNameForAssignment;
+
+    // Weather forecast
+    private string? weatherResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        httpClient = HttpClientFactory.CreateClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(30);
+    }
+
+    private async Task TestConnection()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Testing MCP connection to {BaseUrl}", mcpServerBaseUrl);
+            connectionStatus = "Testing connection...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/WeatherForecast");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                connectionStatus = "Connection Success! MCP Server is responding.";
+                Logger.LogInformation("Successfully connected to MCP Server");
+            }
+            else
+            {
+                connectionStatus = $"Connection Failed! Status: {response.StatusCode}";
+                Logger.LogWarning("MCP Server not available, status: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Connection test failed");
+            connectionStatus = "Connection Failed!";
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task GetAllUsers()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Getting all AD B2C users");
+            usersResult = "Getting users...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/User");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                usersResult = content;
+                Logger.LogInformation("Successfully retrieved users");
+            }
+            else
+            {
+                usersResult = $"Failed to get users. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get users, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get users");
+            errorMessage = $"Error getting users: {ex.Message}";
+        }
+    }
+
+    private async Task GetUsersByAppRole()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(appRole) || string.IsNullOrEmpty(appName))
+        {
+            errorMessage = "Please provide both App Role and App Name";
+            return;
+        }
+
+        try
+        {
+            Logger.LogInformation("Getting users by app role: {AppRole} for app: {AppName}", appRole, appName);
+            usersResult = $"Getting users for role {appRole} in app {appName}...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/User/by-app-role?appRole={Uri.EscapeDataString(appRole)}&appName={Uri.EscapeDataString(appName)}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                usersResult = content;
+                Logger.LogInformation("Successfully retrieved users by app role");
+            }
+            else
+            {
+                usersResult = $"Failed to get users by app role. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get users by app role, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get users by app role");
+            errorMessage = $"Error getting users by app role: {ex.Message}";
+        }
+    }
+
+    private async Task GetAllApplications()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Getting all AD B2C applications");
+            applicationsResult = "Getting applications...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/Application");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                applicationsResult = content;
+                Logger.LogInformation("Successfully retrieved applications");
+            }
+            else
+            {
+                applicationsResult = $"Failed to get applications. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get applications, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get applications");
+            errorMessage = $"Error getting applications: {ex.Message}";
+        }
+    }
+
+    private async Task GetApplicationsIOwned()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Getting applications I owned");
+            applicationsResult = "Getting owned applications...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/Application/owned");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                applicationsResult = content;
+                Logger.LogInformation("Successfully retrieved owned applications");
+            }
+            else
+            {
+                applicationsResult = $"Failed to get owned applications. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get owned applications, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get owned applications");
+            errorMessage = $"Error getting owned applications: {ex.Message}";
+        }
+    }
+
+    private async Task GetApplicationRoles()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(appNameForRoles))
+        {
+            errorMessage = "Please provide App Name";
+            return;
+        }
+
+        try
+        {
+            Logger.LogInformation("Getting application roles for app: {AppName}", appNameForRoles);
+            rolesResult = $"Getting roles for {appNameForRoles}...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/Roles?appName={Uri.EscapeDataString(appNameForRoles)}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                rolesResult = content;
+                Logger.LogInformation("Successfully retrieved application roles");
+            }
+            else
+            {
+                rolesResult = $"Failed to get application roles. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get application roles, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get application roles");
+            errorMessage = $"Error getting application roles: {ex.Message}";
+        }
+    }
+
+    private async Task AssignRoleToUser()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(usernameForRole) || string.IsNullOrEmpty(appNameForRoleAssignment) || string.IsNullOrEmpty(roleNameForAssignment))
+        {
+            errorMessage = "Please provide Username, App Name, and Role Name";
+            return;
+        }
+
+        try
+        {
+            Logger.LogInformation("Assigning role {Role} to user {User} for app {App}", roleNameForAssignment, usernameForRole, appNameForRoleAssignment);
+            rolesResult = $"Assigning {roleNameForAssignment} to {usernameForRole}...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/Roles/assign?username={Uri.EscapeDataString(usernameForRole)}&appName={Uri.EscapeDataString(appNameForRoleAssignment)}&roleName={Uri.EscapeDataString(roleNameForAssignment)}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                rolesResult = content;
+                Logger.LogInformation("Successfully assigned role to user");
+            }
+            else
+            {
+                rolesResult = $"Failed to assign role. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to assign role, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to assign role to user");
+            errorMessage = $"Error assigning role: {ex.Message}";
+        }
+    }
+
+    private async Task GetWeatherForecast()
+    {
+        ClearResults();
+        try
+        {
+            Logger.LogInformation("Getting weather forecast");
+            weatherResult = "Getting weather forecast...";
+            
+            var response = await httpClient!.GetAsync($"{mcpServerBaseUrl}/WeatherForecast");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                weatherResult = content;
+                Logger.LogInformation("Successfully retrieved weather forecast");
+            }
+            else
+            {
+                weatherResult = $"Failed to get weather forecast. Status: {response.StatusCode}";
+                Logger.LogWarning("Failed to get weather forecast, status: {StatusCode}", response.StatusCode);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorMessage = "Unauthorized access. Authentication may be required.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get weather forecast");
+            errorMessage = $"Error getting weather forecast: {ex.Message}";
+        }
+    }
+
+    private void ClearResults()
+    {
+        connectionStatus = null;
+        errorMessage = null;
+        usersResult = null;
+        applicationsResult = null;
+        rolesResult = null;
+        weatherResult = null;
+    }
+}

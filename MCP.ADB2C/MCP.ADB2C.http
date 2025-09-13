@@ -1,0 +1,6 @@
+@MCP.ADB2C_HostAddress = http://localhost:5156
+
+GET {{MCP.ADB2C_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

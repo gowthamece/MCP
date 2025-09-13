@@ -1,0 +1,204 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Azure AD B2C AI Assistant - Home</PageTitle>
+
+<div class="hero-section">
+    <div class="container-fluid">
+        <div class="row align-items-center hero-content-wrapper">
+            <div class="col-lg-8 col-md-10 mx-auto text-center">
+                <div class="hero-content">
+                    <div class="hero-icon mb-4">
+                        <i class="bi bi-robot" style="font-size: 4rem; color: #ffd700;"></i>
+                    </div>
+                    
+                    <h1 class="hero-title mb-4">
+                        Welcome to <span class="text-warning">Azure AD B2C AI Assistant</span>
+                    </h1>
+                    
+                    <p class="lead hero-subtitle mb-5">
+                        Your intelligent Azure AD B2C management companion powered by Model Context Protocol (MCP)
+                    </p>
+                    
+                    <div class="feature-cards row g-4 mb-5">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 feature-card-bootstrap">
+                                <div class="card-body text-center">
+                                    <div class="feature-icon-bootstrap mb-3">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <h5 class="card-title">Secure Management</h5>
+                                    <p class="card-text">Safely manage Azure AD B2C users, roles, and applications with enterprise-grade security.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 feature-card-bootstrap">
+                                <div class="card-body text-center">
+                                    <div class="feature-icon-bootstrap mb-3">
+                                        <i class="bi bi-chat-dots"></i>
+                                    </div>
+                                    <h5 class="card-title">AI-Powered Chat</h5>
+                                    <p class="card-text">Interact with your Azure AD B2C tenant through natural language conversations.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 feature-card-bootstrap">
+                                <div class="card-body text-center">
+                                    <div class="feature-icon-bootstrap mb-3">
+                                        <i class="bi bi-gear"></i>
+                                    </div>
+                                    <h5 class="card-title">Smart Tools</h5>
+                                    <p class="card-text">Access powerful MCP tools for user management, role assignments, and application configuration.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cta-section">
+                        <button class="btn btn-primary btn-lg me-3 start-chat-btn" @onclick="NavigateToChat">
+                            <i class="bi bi-chat-square-text me-2"></i>
+                            Start Chatting with AI Assistant
+                        </button>
+                        
+                        <button class="btn btn-outline-secondary btn-lg" @onclick="ShowLearnMoreModal">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Learn More Modal -->
+<div class="modal fade" id="learnMoreModal" tabindex="-1" aria-labelledby="learnMoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="learnMoreModalLabel">
+                    <i class="bi bi-robot me-2"></i>
+                    Discover Azure AD B2C AI Assistant Capabilities
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12 text-center mb-4">
+                        <p class="lead">Discover the powerful capabilities of your AI assistant for Azure AD B2C management</p>
+                    </div>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="capability-card-modal">
+                            <div class="capability-icon-modal mb-3">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <h6 class="fw-bold">User Information Management</h6>
+                            <ul class="capability-list-modal">
+                                <li>Read and view user accounts</li>
+                                <li>Access user profiles and attributes</li>
+                                <li>Search and filter users efficiently</li>
+                                <li>View user role assignments</li>
+                                <li>Monitor user account status</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="capability-card-modal">
+                            <div class="capability-icon-modal mb-3">
+                                <i class="bi bi-app"></i>
+                            </div>
+                            <h6 class="fw-bold">Application Information Management</h6>
+                            <ul class="capability-list-modal">
+                                <li>View registered applications</li>
+                                <li>Access app configuration details</li>
+                                <li>Monitor API permissions</li>
+                                <li>Check application health status</li>
+                                <li>Review application settings</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="capability-card-modal">
+                            <div class="capability-icon-modal mb-3">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
+                            <h6 class="fw-bold">Role Assignment Management</h6>
+                            <ul class="capability-list-modal">
+                                <li>Manage existing application roles</li>
+                                <li>Assign roles to users</li>
+                                <li>View role hierarchies</li>
+                                <li>Audit role assignments</li>
+                                <li>Monitor role-based permissions</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="capability-card-modal">
+                            <div class="capability-icon-modal mb-3">
+                                <i class="bi bi-chat-dots"></i>
+                            </div>
+                            <h6 class="fw-bold">AI-Powered Interactions</h6>
+                            <ul class="capability-list-modal">
+                                <li>Natural language queries</li>
+                                <li>Intelligent suggestions</li>
+                                <li>Automated task execution</li>
+                                <li>Real-time assistance</li>
+                                <li>Context-aware responses</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>Pro Tip:</strong> Start with simple queries like "Show me all users" or "List all applications" to explore your Azure AD B2C tenant information through the AI assistant.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Close
+                </button>
+                <button type="button" class="btn btn-primary" @onclick="NavigateToChatFromModal">
+                    <i class="bi bi-rocket me-2"></i>Start Chatting Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void NavigateToChat()
+    {
+        Navigation.NavigateTo("/mcpchat");
+    }
+
+    private async Task ShowLearnMoreModal()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModal.show", "learnMoreModal");
+    }
+
+    private async Task NavigateToChatFromModal()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModal.hide", "learnMoreModal");
+        Navigation.NavigateTo("/mcpchat");
+    }
+}

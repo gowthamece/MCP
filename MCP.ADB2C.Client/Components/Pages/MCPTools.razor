@@ -1,0 +1,336 @@
+@page "/mcp-tools"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<h1>MCP Tools Dashboard</h1>
+<p>Interact with all available MCP tools from the Azure AD B2C server</p>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Connection Status -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Connection Status</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary me-2" @onclick="TestConnection">Test MCP Connection</button>
+                    <button class="btn btn-warning me-2" @onclick="ClearResults">Clear All Results</button>
+                    @if (!string.IsNullOrEmpty(connectionStatus))
+                    {
+                        <div class="alert @(connectionStatus.Contains("Success") ? "alert-success" : "alert-danger") mt-2">
+                            @connectionStatus
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- User Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>User Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-info mb-2" @onclick="GetAllUsers">Get All AD B2C Users</button>
+                            <br />
+                            <div class="form-group mb-2">
+                                <label>App Role:</label>
+                                <input @bind="appRole" class="form-control" placeholder="Enter app role ID" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>App Name:</label>
+                                <input @bind="appName" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <button class="btn btn-success" @onclick="GetUsersByAppRole">Get Users by App Role</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(usersResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Users Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@usersResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Application Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-info mb-2" @onclick="GetAllApplications">Get All AD B2C Applications</button>
+                            <br />
+                            <button class="btn btn-primary" @onclick="GetApplicationsIOwned">Get Applications I Owned</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(applicationsResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Applications Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@applicationsResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Role Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-2">
+                                <label>App Name for Roles:</label>
+                                <input @bind="appNameForRoles" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <button class="btn btn-info mb-3" @onclick="GetApplicationRoles">Get Application Roles</button>
+                            
+                            <hr />
+                            
+                            <h5>Assign Role to User</h5>
+                            <div class="form-group mb-2">
+                                <label>Username:</label>
+                                <input @bind="usernameForRole" class="form-control" placeholder="Enter username/email" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>App Name:</label>
+                                <input @bind="appNameForRoleAssignment" class="form-control" placeholder="Enter app name" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label>Role Name:</label>
+                                <input @bind="roleNameForAssignment" class="form-control" placeholder="Enter role name" />
+                            </div>
+                            <button class="btn btn-success" @onclick="AssignRoleToUser">Assign Role to User</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(rolesResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Roles Result:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@rolesResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather Forecast Tool -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Weather Forecast</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-warning" @onclick="GetWeatherForecast">Get Weather Forecast</button>
+                        </div>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(weatherResult))
+                            {
+                                <div class="alert alert-info">
+                                    <h5>Weather Forecast:</h5>
+                                    <pre style="max-height: 300px; overflow-y: auto;">@weatherResult</pre>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <h4>Error:</h4>
+                    <pre>@errorMessage</pre>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // Connection status
+    private string? connectionStatus;
+    private string? errorMessage;
+
+    // User management variables
+    private string? usersResult;
+    private string? appRole;
+    private string? appName;
+
+    // Application management variables
+    private string? applicationsResult;
+
+    // Role management variables
+    private string? rolesResult;
+    private string? appNameForRoles;
+    private string? usernameForRole;
+    private string? appNameForRoleAssignment;
+    private string? roleNameForAssignment;
+
+    // Weather forecast
+    private string? weatherResult;
+
+    private async Task TestConnection()
+    {
+        ClearResults();
+        try
+        {
+            connectionStatus = "Testing connection... (Simulated for now)";
+            await Task.Delay(500);
+            connectionStatus = "Connection Success! (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            connectionStatus = "Connection Failed!";
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task GetAllUsers()
+    {
+        ClearResults();
+        try
+        {
+            usersResult = "Getting users... (Simulated for now)";
+            await Task.Delay(500);
+            usersResult = "Sample Users: John Doe, Jane Smith, Mike Johnson (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting users: {ex.Message}";
+        }
+    }
+
+    private async Task GetUsersByAppRole()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(appRole) || string.IsNullOrEmpty(appName))
+        {
+            errorMessage = "Please provide both App Role and App Name";
+            return;
+        }
+
+        try
+        {
+            usersResult = $"Getting users for role {appRole} in app {appName}... (Simulated)";
+            await Task.Delay(500);
+            usersResult = $"Users with role {appRole} in {appName}: User1, User2 (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting users by app role: {ex.Message}";
+        }
+    }
+
+    private async Task GetAllApplications()
+    {
+        ClearResults();
+        try
+        {
+            applicationsResult = "Getting applications... (Simulated)";
+            await Task.Delay(500);
+            applicationsResult = "Sample Applications: App1, App2, App3 (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting applications: {ex.Message}";
+        }
+    }
+
+    private async Task GetApplicationsIOwned()
+    {
+        ClearResults();
+        try
+        {
+            applicationsResult = "Getting owned applications... (Simulated)";
+            await Task.Delay(500);
+            applicationsResult = "Applications I Own: MyApp1, MyApp2 (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting owned applications: {ex.Message}";
+        }
+    }
+
+    private async Task GetApplicationRoles()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(appNameForRoles))
+        {
+            errorMessage = "Please provide App Name";
+            return;
+        }
+
+        try
+        {
+            rolesResult = $"Getting roles for {appNameForRoles}... (Simulated)";
+            await Task.Delay(500);
+            rolesResult = $"Roles in {appNameForRoles}: Admin, User, Manager (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting application roles: {ex.Message}";
+        }
+    }
+
+    private async Task AssignRoleToUser()
+    {
+        ClearResults();
+        if (string.IsNullOrEmpty(usernameForRole) || string.IsNullOrEmpty(appNameForRoleAssignment) || string.IsNullOrEmpty(roleNameForAssignment))
+        {
+            errorMessage = "Please provide Username, App Name, and Role Name";
+            return;
+        }
+
+        try
+        {
+            rolesResult = $"Assigning {roleNameForAssignment} to {usernameForRole}... (Simulated)";
+            await Task.Delay(500);
+            rolesResult = $"Successfully assigned {roleNameForAssignment} to {usernameForRole} in {appNameForRoleAssignment} (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error assigning role: {ex.Message}";
+        }
+    }
+
+    private async Task GetWeatherForecast()
+    {
+        ClearResults();
+        try
+        {
+            weatherResult = "Getting weather forecast... (Simulated)";
+            await Task.Delay(500);
+            weatherResult = "5-Day Forecast: Sunny, Cloudy, Rainy, Sunny, Partly Cloudy (Simulated)";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error getting weather forecast: {ex.Message}";
+        }
+    }
+
+    private void ClearResults()
+    {
+        connectionStatus = null;
+        errorMessage = null;
+        usersResult = null;
+        applicationsResult = null;
+        rolesResult = null;
+        weatherResult = null;
+    }
+}
