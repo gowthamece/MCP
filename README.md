@@ -1,16 +1,16 @@
-# MCP-FullStack
+# Azure AD B2C MCP-FullStack
 
-A complete **Model Context Protocol (MCP)** implementation using **.NET** with **Microsoft Graph API** integration. This project demonstrates a full-stack architecture with a Blazor client, MCP Server, and real Microsoft Graph API connectivity.
+A complete **Model Context Protocol (MCP)** implementation using **.NET** with **Microsoft Graph API** and **Azure AD B2C** integration. This project demonstrates a full-stack architecture with a Blazor client, MCP Server, and real Microsoft Graph API connectivity with Azure AD B2C authentication.
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    HTTP/MCP     ┌──────────────────┐    Graph API    ┌─────────────────┐
 │   Blazor Client │ ────────────► │    MCP Server    │ ─────────────► │ Microsoft Graph │
-│   (Port 5017)   │               │ (Port 8080/5000) │                │      API        │
+│   (Port 5017)   │               │   (Port 5156)    │                │      API        │
 └─────────────────┘               └──────────────────┘                └─────────────────┘
          │                                   │
-         │ Azure OpenAI                      │ Azure AD
+         │ Azure OpenAI                      │ Azure AD B2C
          ▼                                   ▼
 ┌─────────────────┐                ┌──────────────────┐
 │   GPT-4 LLM     │                │   Authentication │
@@ -20,8 +20,9 @@ A complete **Model Context Protocol (MCP)** implementation using **.NET** with *
 
 ## 🚀 Features
 
-- **Real MCP Server**: Implements Microsoft Graph API with Azure AD authentication
+- **Real MCP Server**: Implements Microsoft Graph API with Azure AD B2C authentication
 - **Blazor Client**: ChatGPT-style UI with Azure OpenAI GPT-4 integration
+- **Azure AD B2C Integration**: Enterprise-grade identity management and authentication
 - **HTTP-based Communication**: Custom HTTP API for MCP protocol communication
 - **Microsoft Graph Integration**: Real user profile data from Azure AD
 - **Comprehensive Logging**: Detailed diagnostic logs for troubleshooting
@@ -29,93 +30,137 @@ A complete **Model Context Protocol (MCP)** implementation using **.NET** with *
 
 ## 📦 Projects
 
-### MCP-Balzor-AI-App (Blazor Client)
+### MCP.ADB2C.Client (Blazor Client)
 - **Framework**: Blazor Server (.NET 8)
 - **AI Integration**: Azure OpenAI GPT-4.1
 - **UI**: Interactive server-side rendering with SignalR
+- **Authentication**: Azure AD B2C with OpenID Connect
 - **MCP Client**: HTTP-based communication to MCP Server
+- **Port**: 5017
 
-### MCP-Balzor-AI-App.MCPServer (MCP Server)
-- **Framework**: ASP.NET Core (.NET 9)
+### MCP.ADB2C (MCP Server)
+- **Framework**: ASP.NET Core (.NET 8)
 - **MCP Protocol**: MCP.NET.Server v0.9.0
 - **API Integration**: Microsoft Graph API v5.90.0
 - **Authentication**: Azure AD with ClientSecret credentials
-- **Ports**: 8080 (MCP), 5000 (HTTP API)
+- **Port**: 5156 (HTTP API)
 
 ### MCP-Balzor-AI-App.ServiceDefaults
 - **Framework**: .NET 8
 - **Purpose**: Shared service defaults and extensions
 
+### MCP-Balzor-AI-App.AppHost
+- **Framework**: .NET Aspire (.NET 8)
+- **Purpose**: Application orchestration and service discovery
+
 ## 🛠️ Setup Instructions
 
 ### Prerequisites
-- .NET 8 SDK or later
-- Visual Studio 2022 or VS Code
-- Azure subscription with:
-  - Azure OpenAI service
-  - Azure AD tenant
-  - App registration with Microsoft Graph permissions
+- **.NET 8 SDK** (required for both client and server)
+- **Azure Account** with Active Directory setup
+- **Azure OpenAI** service access
+- **Visual Studio 2022** or **VS Code** (recommended)
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YourUsername/MCP-FullStack.git
-cd MCP-FullStack
+git clone <repository-url>
+cd MCP-Balzor-AI-App
 ```
 
-### 2. Configure Azure OpenAI
-Update `MCP-Balzor-AI-App/appsettings.json`:
+### 2. Azure AD B2C Configuration
+Configure your Azure AD B2C tenant:
+
+1. **Create Azure AD B2C tenant**
+2. **Register Applications**:
+   - Client Application (for Blazor app)
+   - Server Application (for MCP Server)
+3. **Configure Authentication**:
+   - Set redirect URIs for the client
+   - Grant necessary Graph API permissions
+4. **Update Configuration Files** (see Configuration section below)
+
+### 3. Configuration
+
+#### MCP.ADB2C.Client Configuration
+Update `appsettings.json` in the `MCP.ADB2C.Client` project:
+
 ```json
 {
-  "AzureOpenAI": {
-    "Endpoint": "YOUR_AZURE_OPENAI_ENDPOINT",
-    "Key": "YOUR_AZURE_OPENAI_KEY",
-    "DeploymentName": "YOUR_DEPLOYMENT_NAME"
+  "AzureAd": {
+    "Instance": "https://<your-tenant>.b2clogin.com/",
+    "Domain": "<your-tenant>.onmicrosoft.com",
+    "TenantId": "<your-tenant-id>",
+    "ClientId": "<your-blazor-client-id>",
+    "ClientSecret": "<your-blazor-client-secret>",
+    "CallbackPath": "/signin-oidc",
+    "SignUpSignInPolicyId": "B2C_1_signupsignin1"
+  },
+  "Azure": {
+    "OpenAI": {
+      "Endpoint": "https://<your-openai-resource>.openai.azure.com/",
+      "ApiKey": "<your-openai-api-key>",
+      "Model": "gpt-4"
+    }
+  },
+  "MCPClient": {
+    "BaseUrl": "https://localhost:5156",
+    "TimeoutSeconds": 30
   }
 }
 ```
 
-### 3. Configure Microsoft Graph API
-Update `MCP-Balzor-AI-App.MCPServer/appsettings.json`:
+#### MCP.ADB2C Server Configuration
+Update `appsettings.json` in the `MCP.ADB2C` project:
+
 ```json
 {
+  "AzureAd": {
+    "Instance": "https://login.microsoftonline.com/",
+    "TenantId": "<your-tenant-id>",
+    "ClientId": "<your-server-client-id>",
+    "ClientSecret": "<your-server-client-secret>"
+  },
   "GraphApi": {
-    "ClientId": "YOUR_AZURE_AD_CLIENT_ID",
-    "ClientSecret": "YOUR_AZURE_AD_CLIENT_SECRET", 
-    "TenantId": "YOUR_AZURE_AD_TENANT_ID"
+    "BaseUrl": "https://graph.microsoft.com",
+    "Scopes": ["https://graph.microsoft.com/.default"]
   }
 }
 ```
 
-### 4. Azure AD App Registration Setup
-1. Go to Azure Portal → Azure Active Directory → App registrations
-2. Create a new app registration
-3. Add API permissions:
-   - Microsoft Graph → Application permissions → User.Read.All
-4. Grant admin consent
-5. Create a client secret
-6. Copy ClientId, ClientSecret, and TenantId to configuration
+### 4. Build and Run
 
-### 5. Build and Run
-
-**Terminal 1 - Start MCP Server:**
+#### Option A: Using .NET Aspire (Recommended)
 ```bash
-dotnet run --project MCP-Balzor-AI-App.MCPServer/MCP-Balzor-AI-App.MCPServer.csproj
+# Navigate to the AppHost project
+cd MCP-Balzor-AI-App.AppHost
+
+# Run with Aspire orchestration
+dotnet run
+```
+This will start:
+- **MCP.ADB2C.Client** on port **5017**
+- **MCP.ADB2C** on port **5156**
+
+#### Option B: Manual Startup
+```bash
+# Terminal 1: Start MCP Server
+cd MCP.ADB2C
+dotnet run
+
+# Terminal 2: Start Blazor Client  
+cd MCP.ADB2C.Client
+dotnet run
 ```
 
-**Terminal 2 - Start Blazor Client:**
-```bash
-dotnet run --project MCP-Balzor-AI-App/MCP-Balzor-AI-App.csproj
-```
-
-### 6. Access the Application
-- **Blazor Client**: http://localhost:5017
-- **MCP Server API**: http://localhost:5000
-- **MCP Protocol**: localhost:8080
+### 5. Access the Application
+- **Blazor Client**: `https://localhost:5017`
+- **MCP Server API**: `https://localhost:5156`
+- **Aspire Dashboard**: `https://localhost:15888` (when using Aspire)
 
 ## 💡 Usage
 
-1. Navigate to http://localhost:5017
-2. Go to the "MCP Chat" page
+1. Navigate to `https://localhost:5017`
+2. Go to the "Azure AD B2C AI Assistant" page
 3. Try these commands:
    - `"get current user profile information"`
    - `"pull the user [email] information"`
@@ -130,7 +175,7 @@ dotnet run --project MCP-Balzor-AI-App/MCP-Balzor-AI-App.csproj
 
 ### GraphService.cs
 - Implements `IGraphService` interface
-- Handles Microsoft Graph API authentication with Azure AD
+- Handles Microsoft Graph API authentication with Azure AD B2C
 - Provides real user profile data with fallback to simulation
 
 ### ToolsController.cs
