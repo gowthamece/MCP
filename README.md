@@ -24,7 +24,7 @@ A complete **Model Context Protocol (MCP)** implementation using **.NET** with *
 - **Blazor Client**: ChatGPT-style UI with Azure OpenAI GPT-4 integration
 - **Azure AD B2C Integration**: Enterprise-grade identity management and authentication
 - **HTTP-based Communication**: Custom HTTP API for MCP protocol communication
-- **Microsoft Graph Integration**: Real user profile data from Azure AD
+- **Microsoft Graph Integration**: Real user profile data from Azure AD B2C
 - **Comprehensive Logging**: Detailed diagnostic logs for troubleshooting
 - **Fallback Simulation**: Graceful fallback to simulated data when API calls fail
 
@@ -42,7 +42,7 @@ A complete **Model Context Protocol (MCP)** implementation using **.NET** with *
 - **Framework**: ASP.NET Core (.NET 8)
 - **MCP Protocol**: MCP.NET.Server v0.9.0
 - **API Integration**: Microsoft Graph API v5.90.0
-- **Authentication**: Azure AD with ClientSecret credentials
+- **Authentication**: Azure AD B2C with ClientSecret credentials
 - **Port**: 5156 (HTTP API)
 
 ### MCP-Balzor-AI-App.ServiceDefaults
@@ -215,10 +215,10 @@ info: Received successful response from MCP Server: 850 characters
 ```
 Microsoft.Graph.Models.ODataErrors.ODataError: Resource 'user@domain.com' does not exist
 ```
-**Solution**: Use a valid user email from your Azure AD tenant.
+**Solution**: Use a valid user email from your Azure AD B2C tenant.
 
 ### Authentication Errors
-**Solution**: Verify Azure AD app registration permissions and admin consent.
+**Solution**: Verify Azure AD B2C app registration permissions and admin consent.
 
 ### Connection Errors
 **Solution**: Ensure both MCP Server and Blazor Client are running on correct ports.
